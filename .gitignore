@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+target/
+*.tsbuildinfo
+__pycache__/
+
+# IDE
+.expo/
+.vscode/
+.obsidian/
+.idea/
+.codebuddy/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+credentials/
+packages/app-expo/credentials.json
+
+# Tauri
+packages/app/src-tauri/target/
+packages/app/src-tauri/gen/
+packages/app/src-tauri/WixTools/
+tauri-signing-key.key
+tauri-signing-key.key.pub
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+readese/*
+
+# Local WebDAV test server
+webdav-server/
+theme-studio/.claude/settings.local.json
