@@ -1,10 +1,12 @@
 import i18n from "i18next";
 /**
  * AI Streaming service - preserves the public chat API while routing desktop
- * reading chat through the local Claude Code adapter.
+ * reading chat through Claude Code and mobile/web through the native provider
+ * agent.
  */
 import type { AIConfig, Book, SemanticContext, Skill, Thread } from "../types";
-import type { AgentStreamEvent } from "./agents/reading-agent";
+import { getPlatformService } from "../services/platform";
+import { streamReadingAgent, type AgentStreamEvent } from "./agents/reading-agent";
 import { streamClaudeCodeAgent } from "./claude-code";
 import { processMessages } from "./message-pipeline";
 import type { ToolDefinition } from "./tools/tool-types";
@@ -54,6 +56,15 @@ export interface StreamingOptions {
 export class StreamingChat {
   private abortController: AbortController | null = null;
 
+  private shouldUseClaudeCode(): boolean {
+    try {
+      const platform = getPlatformService();
+      return platform.isDesktop && typeof platform.runClaudeCodeChat === "function";
+    } catch {
+      return false;
+    }
+  }
+
   async stream(options: StreamingOptions): Promise<void> {
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
@@ -82,19 +93,35 @@ export class StreamingChat {
       const toolCalls: Array<{ name: string; args: Record<string, unknown>; result?: unknown }> =
         [];
 
-      const stream = streamClaudeCodeAgent(
-        {
-          thread: options.thread,
-          book: options.book,
-          semanticContext: options.semanticContext,
-          isVectorized: options.isVectorized,
-          deepThinking: options.deepThinking,
-          spoilerFree: options.spoilerFree,
-          signal,
-        },
-        userInput,
-        history,
-      );
+      const stream = this.shouldUseClaudeCode()
+        ? streamClaudeCodeAgent(
+            {
+              thread: options.thread,
+              book: options.book,
+              semanticContext: options.semanticContext,
+              isVectorized: options.isVectorized,
+              deepThinking: options.deepThinking,
+              spoilerFree: options.spoilerFree,
+              signal,
+            },
+            userInput,
+            history,
+          )
+        : streamReadingAgent(
+            {
+              aiConfig: options.aiConfig,
+              book: options.book,
+              semanticContext: options.semanticContext,
+              enabledSkills: options.enabledSkills,
+              isVectorized: options.isVectorized,
+              deepThinking: options.deepThinking,
+              spoilerFree: options.spoilerFree,
+              getAvailableTools: options.getAvailableTools,
+              signal,
+            },
+            userInput,
+            history,
+          );
 
       // Helper to race iterator next() against abort signal
       const raceNext = async (
